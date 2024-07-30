@@ -8,9 +8,30 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
     <link rel="stylesheet" href="style.css"/>
+    <!-- PWA requirements -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#87CEFA">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Navigo">
+    <link rel="apple-touch-icon" href="img/icons/icon-192x192.png">
 </head>
 <body>
-    <main>
+    <!-- Installation Instructions Overlay -->
+    <div id="install-overlay" class="install-overlay">
+        <div class="install-overlay-content">
+            <h1>Install Navigo Web App</h1>
+            <p>To install this web app on your mobile device:</p>
+            <ol>
+                <li>Open the browser menu or share menu on safari.</li>
+                <li>Find and select "Add to Home screen" or "Install App".</li>
+                <li>Follow the on-screen instructions.</li>
+            </ol>
+            <!-- Removed close button to force installation -->
+        </div>
+    </div>
+
+    <main id="app-content">
         <button class="theme-toggle-button" onclick="toggleTheme()">
             <i class="fas" id="theme-icon"></i>
         </button>
@@ -23,14 +44,20 @@
         </section>
         <section id="destination-section" class="destination-section">
             <h2 class="heading">Plan Your Ride</h2>
-            <form onsubmit="event.preventDefault(); goBtn();">
+            <form onsubmit="event.preventDefault(); addMarkersAndFetchRoute();">
                 <div class="input-container">
                     <div class="input-wrapper">
-                        <input type="text" id="destination" name="destination" list="destination-list" placeholder="Destination" oninput="getLocationSuggestions(event, 'dest')">
+                        <label for="start-point" class="body-text">Start Point:</label>
+                        <input type="text" id="start-point" name="start-point" list="start-point-list" oninput="getLocationSuggestions(event, 'start')">
+                        <datalist id="start-point-list"></datalist>
+                    </div>
+                    <div class="input-wrapper">
+                        <label for="destination" class="body-text">Destination:</label>
+                        <input type="text" id="destination" name="destination" list="destination-list" oninput="getLocationSuggestions(event, 'dest')">
                         <datalist id="destination-list"></datalist>
                     </div>
                 </div>
-                <button type="submit" class="button btn request-button"><i class="fas fa-car-side"></i> <span>GO!</span></button>
+                <button type="submit" class="button request-button">Request Driver</button>
             </form>
         </section>
         <div id="map-container">
@@ -43,287 +70,32 @@
 
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+    <script src="script.js"></script> <!-- Include your main script here -->
     <script>
-        screen.lockOrientation("portrait-primary");
-    </script>
-    <script>
-        let startMarker, destMarker, routeControl;
-        let map;
-        let userLocation = null;
-
-        function toggleTheme() {
-            const currentTheme = document.documentElement.getAttribute("data-theme");
-            const newTheme = currentTheme === "dark" ? "light" : "dark";
-            document.documentElement.setAttribute("data-theme", newTheme);
-            localStorage.setItem('theme', newTheme); // Save the theme to localStorage
-            updateThemeIcon();
-        }
-
-        function updateThemeIcon() {
-            const currentTheme = document.documentElement.getAttribute("data-theme");
-            const themeIcon = document.getElementById("theme-icon");
-            if (currentTheme === "dark") {
-                themeIcon.classList.remove("fa-sun");
-                themeIcon.classList.add("fa-moon");
-            } else {
-                themeIcon.classList.remove("fa-moon");
-                themeIcon.classList.add("fa-sun");
-            }
-        }
-
-        function showDestinationSection() {
-            const button = document.querySelector('.get-started-button');
-            const icon = button.querySelector('.fas');
-            const text = button.querySelector('span');
-            const heroText = document.querySelectorAll('.hero h2, .hero p');
-            const heroSection = document.querySelector('.hero');
-            const destinationSection = document.getElementById('destination-section');
-
-            // Add "driving" class to trigger the animation
-            button.classList.add('driving');
-
-            // Remove the "GO!" text
-            text.classList.add('disappear');
-
-            // Hide the welcome text
-            heroText.forEach(element => element.classList.add('hidden'));
-
-            icon.addEventListener('animationend', () => {
-                // Hide the hero section and show the destination section
-                heroSection.classList.add('hidden');
-                destinationSection.style.display = 'block';
-                destinationSection.classList.add('visible');
-
-                // Scroll into view smoothly, if needed
-                destinationSection.scrollIntoView({ behavior: 'smooth' });
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/service-worker.js')
+            .then(function(registration) {
+                console.log('ServiceWorker registration successful:', registration);
+            })
+            .catch(function(error) {
+                console.log('ServiceWorker registration failed:', error);
             });
         }
 
-        function goBtn() {
-            const rqbutton = document.querySelector('.request-button');
-            const rqicon = rqbutton.querySelector('.fas');
-            const rqtext = rqbutton.querySelector('span');
-            const destinationText = document.querySelectorAll('.destination-section h2, .destination-section div');
-            const destinationSection = document.getElementById('destination-section');
-
-            // Check if destination input is empty
-            const destination = document.getElementById('destination').value;
-            if (!destination) {
-                alert('Please enter a destination.');
-                return;
-            }
-
-            // Add "driving" class to trigger the animation
-            rqbutton.classList.add('driving');
-
-            // Remove the "GO!" text
-            rqtext.classList.add('disappear');
-
-            // Hide the welcome text
-            destinationText.forEach(element => element.classList.add('hidden'));
-
-            rqicon.addEventListener('animationend', () => {
-                // Hide the hero section and show the destination section
-                destinationSection.classList.add('hidden');
-            });
-
-            // Add markers and fetch the route
-            if (userLocation) {
-                addMarkersAndFetchRoute(userLocation);
-            }
-        }
-
-        function showMapOrMessage(latitude, longitude, map) {
-            const mapContainer = document.getElementById('map-container');
-            const message = document.getElementById('unavailable-message');
-
-            if (isLocationInEurope(latitude, longitude)) {
-                mapContainer.style.display = 'block';
-                message.style.display = 'none';
-                map.setView([latitude, longitude], 10);
-            } else {
-                mapContainer.style.display = 'none';
-                message.style.display = 'block';
-            }
-        }
-
-        function isLocationInEurope(lat, lon) {
-            return lat >= 34.0 && lat <= 72.0 && lon >= -25.0 && lon <= 45.0;
-        }
-
-        function getLocationSuggestions(event, type) {
-            const query = event.target.value;
-            const dataList = document.getElementById(`${type === 'start' ? 'start-point-list' : 'destination-list'}`);
-
-            if (query === '') {
-                dataList.innerHTML = '';
-                return;
-            }
-
-            const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&limit=5&bounded=1&viewbox=-25.0,72.0,45.0,34.0`;
-
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    dataList.innerHTML = '';
-                    data.forEach(place => {
-                        const option = document.createElement('option');
-                        option.value = place.display_name;
-                        dataList.appendChild(option);
-                    });
-                });
-        }
-
-        function addMarkersAndFetchRoute(startLatLng) {
-            const destination = document.getElementById('destination').value;
-
-            if (!destination) {
-                alert('Please enter a destination.');
-                return;
-            }
-
-            const destGeocodeUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(destination)}&format=json&addressdetails=1&limit=1`;
-
-            fetch(destGeocodeUrl)
-                .then(response => response.json())
-                .then(destData => {
-                    if (destData.length > 0) {
-                        const destLatLng = [destData[0].lat, destData[0].lon];
-
-                        const startIcon = L.icon({
-                            iconUrl: 'img/start-icon.png',
-                            iconSize: [32, 32],
-                            iconAnchor: [16, 32],
-                            popupAnchor: [0, -32]
-                        });
-
-                        const destIcon = L.icon({
-                            iconUrl: 'img/destination-icon.png',
-                            iconSize: [32, 32],
-                            iconAnchor: [16, 32],
-                            popupAnchor: [0, -32]
-                        });
-
-                        if (startMarker) {
-                            map.removeLayer(startMarker);
-                        }
-                        if (destMarker) {
-                            map.removeLayer(destMarker);
-                        }
-                        if (routeControl) {
-                            map.removeControl(routeControl);
-                        }
-
-                        startMarker = L.marker(startLatLng, { icon: startIcon }).addTo(map).bindPopup('Start Point').openPopup();
-                        destMarker = L.marker(destLatLng, { icon: destIcon }).addTo(map).bindPopup('Destination').openPopup();
-
-                        fetchRoute(startLatLng, destLatLng);
-                    } else {
-                        alert('Unable to geocode the destination.');
-                    }
-                });
-        }
-
-        function fetchRoute(startLatLng, destLatLng) {
-            if (routeControl) {
-                map.removeControl(routeControl);
-            }
-
-            routeControl = L.Routing.control({
-                waypoints: [
-                    L.latLng(startLatLng),
-                    L.latLng(destLatLng)
-                ],
-                createMarker: function(i, waypoint, n) {
-                    const iconUrl = i === 0 ? 'img/start-icon.png' : 'img/destination-icon.png';
-                    return L.marker(waypoint.latLng, {
-                        icon: L.icon({
-                            iconUrl: iconUrl,
-                            iconSize: [32, 32],
-                            iconAnchor: [16, 32],
-                            popupAnchor: [0, -32]
-                        })
-                    });
-                },
-                routeWhileDragging: false, // Disable dragging waypoints
-                show: false, // Disable the default turn-by-turn navigation
-                addWaypoints: true, // Disable adding waypoints by clicking on the map
-                router: L.Routing.osrmv1({
-                    serviceUrl: 'https://router.project-osrm.org/route/v1',
-                    profile: 'driving',
-
-                })
-            }).addTo(map);
-
-            routeControl.on('routesfound', function(e) {
-                const routes = e.routes;
-                const segments = routes[0].coordinates;
-                const summary = routes[0].summary;
-                console.log(`Route found: ${summary.totalDistance / 1000} km, ${summary.totalTime / 60} minutes`);
-            });
-
-            routeControl.on('routingerror', function() {
-                alert('Unable to find a route between the start point and destination. Please choose a different destination.');
-            });
-
-        }
-
+        // Show the install overlay on page load and hide main content
         document.addEventListener('DOMContentLoaded', function() {
-            const savedTheme = localStorage.getItem('theme');
-            if (savedTheme) {
-                document.documentElement.setAttribute("data-theme", savedTheme);
-            }
-            updateThemeIcon();
-
-            map = L.map('map', {
-                center: [54.5260, 15.2551],
-                zoom: 4,
-                zoomControl: false, // Disable zoom controls
-                scrollWheelZoom: true, // Allow zooming with scroll wheel
-                doubleClickZoom: true, // Allow double click zoom
-                dragging: true, // Disable dragging of the map
-                attributionControl: false, // Disable attribution control
-                maxBounds: [[34.0, -25.0], [72.0, 45.0]],
-                maxBoundsViscosity: 1.0
-            });
-
-            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                minZoom: 4,
-                maxZoom: 19
-            }).addTo(map);
-
-            map.on('click', function(e) {
-                // Prevent users from adding points by clicking on the map
-                e.originalEvent.preventDefault();
-            });
-
-            // Request user's location and watch for position changes
-            if (navigator.geolocation) {
-                navigator.geolocation.watchPosition(
-                    function(position) {
-                        const latitude = position.coords.latitude;
-                        const longitude = position.coords.longitude;
-                        console.log(`Latitude: ${latitude}, Longitude: ${longitude}`);
-                        userLocation = [latitude, longitude];
-                        showMapOrMessage(latitude, longitude, map);
-                        if (!startMarker) {
-                            map.setView(userLocation, 10);
-                        }
-                    },
-                    function(error) {
-                        console.error(`Error obtaining location: ${error.message}`);
-                    },
-                    {
-                        enableHighAccuracy: true,
-                        timeout: 5000,
-                        maximumAge: 0
-                    }
-                );
-            } else {
-                console.error('Geolocation is not supported by this browser.');
-            }
-
+            const installOverlay = document.getElementById('install-overlay');
+            const appContent = document.getElementById('app-content');
+            installOverlay.style.display = 'flex'; // Display the overlay
+            appContent.style.visibility = 'hidden'; // Hide the main content
         });
+
+        function closeInstallOverlay() {
+            const installOverlay = document.getElementById('install-overlay');
+            const appContent = document.getElementById('app-content');
+            installOverlay.style.display = 'none';
+            appContent.style.visibility = 'visible';
+        }
     </script>
 </body>
 </html>
