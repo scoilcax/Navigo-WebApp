@@ -7,12 +7,12 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
-    <link rel="stylesheet" href="style.css"/>
+    <link rel="stylesheet" href="style.css"/> <!-- Link to the new CSS file -->
 </head>
 <body>
     <main>
-        <button class="theme-toggle-button" onclick="toggleTheme()">
-            <i class="fas" id="theme-icon"></i>
+        <button class="settings-toggle-button" onclick="toggleSettings()">
+            <i class="fas fa-cog" style="color: var(--icon-color);"></i>
         </button>
         <section class="hero">
             <h2 class="heading">Welcome to Navigo</h2>
@@ -39,17 +39,76 @@
         <div id="unavailable-message" class="destination-section">
             <h2 class="heading">NAVIGO is unavailable outside of Europe</h2>
         </div>
+
+        <!-- Settings Overlay -->
+        <div class="settings-overlay" id="settings-overlay">
+            <div class="settings-container">
+                <button class="close-settings" onclick="closeSettings()">
+                    <i class="fas fa-times"></i>
+                </button>
+                <h2>Settings</h2>
+                <div class="form-group">
+                    <label for="api-key-input">API Key</label>
+                    <input type="text" id="api-key-input" placeholder="Enter your API Key">
+                </div>
+                <div class="form-group dark-mode-toggle">
+                    <label for="theme-toggle">Theme</label>
+                    <button id="theme-toggle" onclick="toggleTheme()">
+                        <i class="fas" id="settings-theme-icon"></i>
+                    </button>
+                </div>
+                <div class="credits">
+                    <h3>Credits</h3>
+                    <p>Icons by <a href="https://fontawesome.com/" target="_blank">FontAwesome</a></p>
+                    <p>Maps by <a href="https://leafletjs.com/" target="_blank">Leaflet</a></p>
+                    <p>Routing by <a href="https://www.liedman.net/leaflet-routing-machine/" target="_blank">Leaflet Routing Machine</a></p>
+                </div>
+            </div>
+        </div>
     </main>
 
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+    <script src="https://unpkg.com/leaflet-geometryutil"></script>
     <script>
-        screen.lockOrientation("portrait-primary");
-    </script>
-    <script>
+        let API_KEY = localStorage.getItem('api_key') || '';
         let startMarker, destMarker, routeControl;
         let map;
         let userLocation = null;
+
+        if (!API_KEY) {
+            promptForApiKey();
+        }
+
+        function promptForApiKey() {
+            let apiKey;
+            do {
+                apiKey = prompt('Please enter your API key:');
+            } while (!apiKey);
+            localStorage.setItem('api_key', apiKey);
+            API_KEY = apiKey;
+        }
+
+        function toggleSettings() {
+            const settingsOverlay = document.getElementById('settings-overlay');
+            if (settingsOverlay.style.display === 'flex') {
+                settingsOverlay.style.display = 'none';
+            } else {
+                settingsOverlay.style.display = 'flex';
+                document.getElementById('api-key-input').value = API_KEY || '';
+                updateSettingsThemeIcon(); // Update the icon in the settings when opened
+            }
+        }
+
+        function closeSettings() {
+            const settingsOverlay = document.getElementById('settings-overlay');
+            const newApiKey = document.getElementById('api-key-input').value;
+            if (newApiKey) {
+                localStorage.setItem('api_key', newApiKey);
+                API_KEY = newApiKey;
+            }
+            settingsOverlay.style.display = 'none';
+        }
 
         function toggleTheme() {
             const currentTheme = document.documentElement.getAttribute("data-theme");
@@ -57,17 +116,30 @@
             document.documentElement.setAttribute("data-theme", newTheme);
             localStorage.setItem('theme', newTheme); // Save the theme to localStorage
             updateThemeIcon();
+            updateSettingsThemeIcon();
         }
 
         function updateThemeIcon() {
             const currentTheme = document.documentElement.getAttribute("data-theme");
-            const themeIcon = document.getElementById("theme-icon");
+            const themeIcon = document.getElementById("theme-toggle").querySelector('i');
             if (currentTheme === "dark") {
                 themeIcon.classList.remove("fa-sun");
                 themeIcon.classList.add("fa-moon");
             } else {
                 themeIcon.classList.remove("fa-moon");
                 themeIcon.classList.add("fa-sun");
+            }
+        }
+
+        function updateSettingsThemeIcon() {
+            const currentTheme = document.documentElement.getAttribute("data-theme");
+            const settingsThemeIcon = document.getElementById("settings-theme-icon");
+            if (currentTheme === "dark") {
+                settingsThemeIcon.classList.remove("fa-sun");
+                settingsThemeIcon.classList.add("fa-moon");
+            } else {
+                settingsThemeIcon.classList.remove("fa-moon");
+                settingsThemeIcon.classList.add("fa-sun");
             }
         }
 
@@ -133,14 +205,14 @@
             }
         }
 
-        function showMapOrMessage(latitude, longitude, map) {
+        function showMapOrMessage(latitude, longitude, _map) {
             const mapContainer = document.getElementById('map-container');
             const message = document.getElementById('unavailable-message');
 
             if (isLocationInEurope(latitude, longitude)) {
                 mapContainer.style.display = 'block';
                 message.style.display = 'none';
-                map.setView([latitude, longitude], 10);
+                _map.setView([latitude, longitude], 12); // Zoom to user's current location
             } else {
                 mapContainer.style.display = 'none';
                 message.style.display = 'block';
@@ -217,14 +289,23 @@
                         startMarker = L.marker(startLatLng, { icon: startIcon }).addTo(map).bindPopup('Start Point').openPopup();
                         destMarker = L.marker(destLatLng, { icon: destIcon }).addTo(map).bindPopup('Destination').openPopup();
 
-                        fetchRoute(startLatLng, destLatLng);
+                        fetchRouteWithTraffic(startLatLng, destLatLng);
                     } else {
                         alert('Unable to geocode the destination.');
                     }
                 });
         }
 
-        function fetchRoute(startLatLng, destLatLng) {
+        async function fetchRouteWithTraffic(startLatLng, destLatLng) {
+            if (routeControl) {
+                map.removeControl(routeControl);
+            }
+
+            const response = await fetch(`https://api.openrouteservice.org/v2/directions/driving-car?api_key=${API_KEY}&start=${startLatLng[1]},${startLatLng[0]}&end=${destLatLng[1]},${destLatLng[0]}&profile=driving-car&options={"traffic":"true"}`);
+            const data = await response.json();
+
+            const coords = data.features[0].geometry.coordinates.map(coord => [coord[1], coord[0]]);
+
             if (routeControl) {
                 map.removeControl(routeControl);
             }
@@ -247,11 +328,10 @@
                 },
                 routeWhileDragging: false, // Disable dragging waypoints
                 show: false, // Disable the default turn-by-turn navigation
-                addWaypoints: true, // Disable adding waypoints by clicking on the map
+                addWaypoints: false, // Disable adding waypoints by clicking on the map
                 router: L.Routing.osrmv1({
-                    serviceUrl: 'https://router.project-osrm.org/route/v1',
-                    profile: 'driving',
-
+                    coordinates: coords,
+                    geometries: 'polyline'
                 })
             }).addTo(map);
 
@@ -265,7 +345,6 @@
             routeControl.on('routingerror', function() {
                 alert('Unable to find a route between the start point and destination. Please choose a different destination.');
             });
-
         }
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -274,6 +353,7 @@
                 document.documentElement.setAttribute("data-theme", savedTheme);
             }
             updateThemeIcon();
+            updateSettingsThemeIcon();
 
             map = L.map('map', {
                 center: [54.5260, 15.2551],
@@ -281,7 +361,7 @@
                 zoomControl: false, // Disable zoom controls
                 scrollWheelZoom: true, // Allow zooming with scroll wheel
                 doubleClickZoom: true, // Allow double click zoom
-                dragging: true, // Disable dragging of the map
+                dragging: true, // Enable dragging of the map
                 attributionControl: false, // Disable attribution control
                 maxBounds: [[34.0, -25.0], [72.0, 45.0]],
                 maxBoundsViscosity: 1.0
@@ -307,7 +387,7 @@
                         userLocation = [latitude, longitude];
                         showMapOrMessage(latitude, longitude, map);
                         if (!startMarker) {
-                            map.setView(userLocation, 10);
+                            map.setView(userLocation, 12); // Zoom to user's current location
                         }
                     },
                     function(error) {
@@ -322,7 +402,6 @@
             } else {
                 console.error('Geolocation is not supported by this browser.');
             }
-
         });
     </script>
 </body>
