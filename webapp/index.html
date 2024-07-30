@@ -10,21 +10,7 @@
     <link rel="stylesheet" href="style.css"/>
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-rotatedmarker/leaflet.rotatedMarker.js"></script>
-    <!-- Include Leaflet-Rotate plugin's JS file -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-rotatedmarker/0.2.0/leaflet.rotatedMarker.min.js"></script>
-    <style>
-        #map-container {
-            position: relative;
-            width: 100%;
-            height: 100vh;
-            overflow: hidden;
-        }
-        #map {
-            width: 100%;
-            height: 100%;
-            transition: transform 0.5s;
-        }
-    </style>
 </head>
 <body>
 <main>
@@ -57,7 +43,11 @@
         <h2 class="heading">NAVIGO is unavailable outside of Europe</h2>
     </div>
 
-    <!-- Settings Overlay -->
+    <div id="direction-overlay" class="direction-overlay" style="display: none;">
+        <i id="direction-icon" class="fas fa-arrow-right"></i>
+        <span id="direction-text">Next turn: </span>
+    </div>
+
     <div class="settings-overlay" id="settings-overlay">
         <div class="settings-container">
             <button class="close-settings" onclick="closeSettings()">
@@ -372,6 +362,8 @@ async function fetchRouteWithTraffic(startLatLng, destLatLng) {
                     show: false,
                     addWaypoints: false
                 }).addTo(map);
+
+                showNextDirection(section);
             } else {
                 throw new Error('Route polyline data is missing.');
             }
@@ -388,7 +380,24 @@ function rotateMap(bearing) {
     document.getElementById('map').style.transform = `rotate(${bearing}deg)`;
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+function showNextDirection(section) {
+    const directionOverlay = document.getElementById('direction-overlay');
+    const directionText = document.getElementById('direction-text');
+    const directionIcon = document.getElementById('direction-icon');
+
+    const firstStep = section.turnByTurnActions && section.turnByTurnActions[0];
+    if (firstStep) {
+        directionText.textContent = firstStep.action
+            ? `Next turn: ${firstStep.action} onto ${firstStep.nextRoad.name}`
+            : "Continue straight";
+        directionOverlay.style.display = 'flex';
+    } else {
+        directionOverlay.style.display = 'none';
+    }
+    directionOverlay.style.display = 'flex'; // Show direction overlay
+}
+
+document.addEventListener('DOMContentLoaded', function () {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme) {
         document.documentElement.setAttribute("data-theme", savedTheme);
@@ -415,7 +424,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (navigator.geolocation) {
         navigator.geolocation.watchPosition(
-            function(position) {
+            function (position) {
                 const latitude = position.coords.latitude;
                 const longitude = position.coords.longitude;
                 console.log(`Latitude: ${latitude}, Longitude: ${longitude}`);
@@ -425,7 +434,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     map.setView(userLocation, 16);  // Set view to closer zoom level when location is updated
                 }
             },
-            function(error) {
+            function (error) {
                 console.error(`Error obtaining location: ${error.message}`);
             },
             {

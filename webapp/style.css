@@ -11,7 +11,6 @@
             text-align: center;
         }
 
-        /* Dark mode theme */
         [data-theme="dark"] {
             --background-color: #121212;
             --text-color: #BB86FC;
@@ -20,7 +19,6 @@
             --input-border-color: #BB86FC;
         }
 
-        /* Global styles */
         html, body {
             height: 100%;
             margin: 0;
@@ -43,7 +41,6 @@
             text-align: center;
         }
 
-        /* Text styles */
         .heading {
             font-size: var(--font-size-heading);
             font-weight: 700;
@@ -55,7 +52,6 @@
             margin: 10px 0;
         }
 
-        /* Hero section */
         .hero {
             display: flex;
             flex-direction: column;
@@ -83,23 +79,45 @@
             transition: opacity 0.5s ease;
         }
 
-        /* Map container */
         #map-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 1;
+            width: 100%;
+            height: 100vh;
             overflow: hidden;
-            transition: height 0.5s ease;
+            border-radius: 0 !important;
         }
 
         #map {
-            flex: 1;
-            height: 100%;
             width: 100%;
-            border-radius: 20px 20px 0 0;
+            height: 100%;
+            transition: transform 0.5s;
         }
 
-        /* Destination section */
+        .direction-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2;
+            padding: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .direction-overlay i {
+            margin-right: 10px;
+        }
+
         .destination-section {
             padding: 20px;
             display: none;
@@ -107,7 +125,6 @@
             text-align: center;
         }
 
-        /* Input container */
         .input-container {
             display: flex;
             gap: 10px;
@@ -123,7 +140,6 @@
             flex-direction: column;
         }
 
-        /* Input styles */
         .input-wrapper input,
         .form-group input {
             background-color: transparent;
@@ -171,7 +187,6 @@
             }
         }
 
-        /* Buttons */
         .button {
             background-color: transparent;
             color: var(--button-text-color);
@@ -204,7 +219,6 @@
             visibility: hidden;
         }
 
-        /* Keyframes */
         @keyframes driveOff {
             0% {
                 transform: translateX(0);
@@ -214,7 +228,6 @@
             }
         }
 
-        /* Theme toggle button */
         .theme-toggle-button {
             position: absolute;
             top: 10px;
@@ -227,19 +240,16 @@
             outline: none;
         }
 
-        /* Unavailable message */
         #unavailable-message {
             display: none;
             margin-top: 20px;
             text-align: center;
         }
 
-        /* Hide the leaflet-routing-machine controls */
         .leaflet-routing-container {
             display: none;
         }
 
-        /* Settings */
         .settings-overlay {
             position: fixed;
             top: 0;
@@ -247,7 +257,7 @@
             width: 100%;
             height: 100%;
             background: rgba(0,0,0,0.5);
-            display: none; /* Initially hidden */
+            display: none;
             justify-content: center;
             align-items: center;
             z-index: 1000;
@@ -320,26 +330,15 @@
             font-size: 0.9em;
         }
 
-        #map-container {
-            position: relative;
-            height: 400px;
-        }
-
-        #map {
-            width: 100%;
-            height: 100%;
-        }
-
-        /* Settings Toggle Button */
         .settings-toggle-button {
-            position: fixed;       /* Fix the button in place */
-            top: 20px;             /* Distance from the top of the screen */
-            right: 20px;           /* Distance from the right side of the screen */
-            background: none;      /* No background color */
-            border: none;          /* No border */
-            cursor: pointer;       /* Pointer cursor on hover */
-            font-size: 24px;       /* Increase the icon size */
-            color: var(--icon-color); /* Use the global icon color */
-            outline: none;         /* No outline */
-            z-index: 999;          /* Ensure it stays on top */
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 24px;
+            color: var(--icon-color);
+            outline: none;
+            z-index: 999;
         }
