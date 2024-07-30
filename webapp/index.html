@@ -12,6 +12,19 @@
     <script src="https://unpkg.com/leaflet-rotatedmarker/leaflet.rotatedMarker.js"></script>
     <!-- Include Leaflet-Rotate plugin's JS file -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-rotatedmarker/0.2.0/leaflet.rotatedMarker.min.js"></script>
+    <style>
+        #map-container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #map {
+            width: 100%;
+            height: 100%;
+            transition: transform 0.5s;
+        }
+    </style>
 </head>
 <body>
 <main>
@@ -201,7 +214,7 @@ function showMapOrMessage(latitude, longitude, _map) {
     if (isLocationInEurope(latitude, longitude)) {
         mapContainer.style.display = 'block';
         message.style.display = 'none';
-        _map.setView([latitude, longitude], 14);  // Zoom in closer when location is detected
+        _map.setView([latitude, longitude], 16);  // Zoom in closer when location is detected
     } else {
         mapContainer.style.display = 'none';
         message.style.display = 'block';
@@ -329,10 +342,10 @@ async function fetchRouteWithTraffic(startLatLng, destLatLng) {
 
                 console.log('Route coordinates:', coords);
 
-                // Rotate start marker based on the direction of the first segment
+                // Rotate map based on the direction of the first segment
                 if (coords.length > 1) {
                     const bearing = calculateBearing(coords[0], coords[1]);
-                    startMarker.setRotationAngle(bearing);
+                    rotateMap(bearing);
                 }
 
                 routeControl = L.Routing.control({
@@ -371,6 +384,10 @@ async function fetchRouteWithTraffic(startLatLng, destLatLng) {
     }
 }
 
+function rotateMap(bearing) {
+    document.getElementById('map').style.transform = `rotate(${bearing}deg)`;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme) {
@@ -381,7 +398,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     map = L.map('map', {
         center: [54.5260, 15.2551],
-        zoom: 14,  // Closer zoom level
+        zoom: 16,  // Closer zoom level
         zoomControl: false,
         scrollWheelZoom: true,
         doubleClickZoom: true,
@@ -405,7 +422,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 userLocation = [latitude, longitude];
                 showMapOrMessage(latitude, longitude, map);
                 if (!startMarker) {
-                    map.setView(userLocation, 14);  // Set view to closer zoom level when location is updated
+                    map.setView(userLocation, 16);  // Set view to closer zoom level when location is updated
                 }
             },
             function(error) {
