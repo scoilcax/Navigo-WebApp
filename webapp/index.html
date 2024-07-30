@@ -26,10 +26,6 @@
             <form onsubmit="event.preventDefault(); addMarkersAndFetchRoute();">
                 <div class="input-container">
                     <div class="input-wrapper">
-                        <input type="text" id="start-point" name="start-point" list="start-point-list" placeholder="Start Point" oninput="getLocationSuggestions(event, 'start')">
-                        <datalist id="start-point-list"></datalist>
-                    </div>
-                    <div class="input-wrapper">
                         <input type="text" id="destination" name="destination" list="destination-list" placeholder="Destination" oninput="getLocationSuggestions(event, 'dest')">
                         <datalist id="destination-list"></datalist>
                     </div>
@@ -202,7 +198,7 @@
                 fetch(destGeocodeUrl).then(response => response.json())
             ]).then(([startData, destData]) => {
                 if (startData.length > 0 && destData.length > 0) {
-                    const startLatLng = [position.coords.latitude, position.coords.longitude];
+                    const startLatLng = [navigator.geolocation.getCurrentPosition.coords.latitude, navigator.geolocation.getCurrentPosition.coords.longitude];
                     const destLatLng = [destData[0].lat, destData[0].lon];
 
                     const startIcon = L.icon({
