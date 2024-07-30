@@ -70,6 +70,8 @@
 <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
 <script src="https://unpkg.com/leaflet-geometryutil"></script>
+<script src="https://js.api.here.com/v3/3.1/mapsjs-core.js"></script>
+<script src="https://js.api.here.com/v3/3.1/mapsjs-service.js"></script>
 <script>
 let API_KEY = localStorage.getItem('api_key') || '';
 let startMarker, destMarker, routeControl;
@@ -300,7 +302,14 @@ async function fetchRouteWithTraffic(startLatLng, destLatLng) {
             const route = data.routes[0];
             if (route.sections && route.sections.length > 0) {
                 const section = route.sections[0];
-                const coords = section.polyline.map(coord => [coord[1], coord[0]]);
+
+                // Using HERE API polyline decoder
+                const decodedLine = H.geo.LineString.fromFlexiblePolyline(section.polyline);
+                const coords = [];
+                decodedLine.eachLatLngAlt((lat, lng, alt) => {
+                    coords.push([lat, lng]);
+                });
+
                 console.log('Route coordinates:', coords);
 
                 routeControl = L.Routing.control({
@@ -308,7 +317,7 @@ async function fetchRouteWithTraffic(startLatLng, destLatLng) {
                         L.latLng(startLatLng),
                         L.latLng(destLatLng)
                     ],
-                    createMarker: function(i, waypoint, n) {
+                    createMarker: function (i, waypoint, n) {
                         const iconUrl = i === 0 ? 'img/start-icon.png' : 'img/destination-icon.png';
                         return L.marker(waypoint.latLng, {
                             icon: L.icon({
