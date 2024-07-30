@@ -225,6 +225,19 @@ main {
     outline: none;
 }
 
+.settings-toggle-button {
+    position: fixed;       /* Fix the button in place */
+    top: 20px;             /* Distance from the top of the screen */
+    right: 20px;           /* Distance from the right side of the screen */
+    background: none;      /* No background color */
+    border: none;          /* No border */
+    cursor: pointer;       /* Pointer cursor on hover */
+    font-size: 24px;       /* Increase the icon size */
+    color: var(--icon-color); /* Use the global icon color */
+    outline: none;         /* No outline */
+    z-index: 999;          /* Ensure it stays on top */
+}
+
 /* Unavailable message */
 #unavailable-message {
     display: none;
