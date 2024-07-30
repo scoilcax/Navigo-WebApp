@@ -212,7 +212,7 @@ function showMapOrMessage(latitude, longitude, _map) {
 }
 
 function isLocationInEurope(lat, lon) {
-    return lat >= 34.0 && lat <= 72.0 and lon >= -25.0 and lon <= 45.0;
+    return lat >= 34.0 && lat <= 72.0 && lon >= -25.0 && lon <= 45.0;
 }
 
 function getLocationSuggestions(event, type) {
@@ -363,7 +363,7 @@ async function fetchRouteWithTraffic(startLatLng, destLatLng) {
                     addWaypoints: false
                 }).addTo(map);
 
-                showNextDirection(section);
+                showNextDirection(section.turnByTurnActions);
             } else {
                 throw new Error('Route polyline data is missing.');
             }
@@ -380,21 +380,48 @@ function rotateMap(bearing) {
     document.getElementById('map').style.transform = `rotate(${bearing}deg)`;
 }
 
-function showNextDirection(section) {
+function showNextDirection(actions) {
     const directionOverlay = document.getElementById('direction-overlay');
     const directionText = document.getElementById('direction-text');
     const directionIcon = document.getElementById('direction-icon');
 
-    const firstStep = section.turnByTurnActions && section.turnByTurnActions[0];
-    if (firstStep) {
-        directionText.textContent = firstStep.action
-            ? `Next turn: ${firstStep.action} onto ${firstStep.nextRoad.name}`
-            : "Continue straight";
-        directionOverlay.style.display = 'flex';
+    const nextAction = actions && actions[0];
+    if (nextAction) {
+        let actionText = "";
+        let iconClass = "fas fa-arrow-right"; // Default icon
+        
+        switch (nextAction.action) {
+            case "turn-left":
+                actionText = "Turn left";
+                iconClass = "fas fa-arrow-left";
+                break;
+            case "turn-right":
+                actionText = "Turn right";
+                iconClass = "fas fa-arrow-right";
+                break;
+            case "continue":
+                actionText = "Continue straight";
+                iconClass = "fas fa-arrow-up";
+                break;
+            case "enter-roundabout":
+                actionText = "Enter the roundabout";
+                iconClass = "fas fa-circle";
+                break;
+            case "exit-roundabout":
+                actionText = `Take the ${nextAction.exit} exit at the roundabout`;
+                iconClass = "fas fa-circle";
+                break;
+            default:
+                actionText = nextAction.instruction || "Proceed";
+                iconClass = "fas fa-info-circle";
+        }
+
+        directionText.textContent = actionText;
+        directionIcon.className = iconClass;
+        directionOverlay.style.display = 'flex'; // Show direction overlay
     } else {
         directionOverlay.style.display = 'none';
     }
-    directionOverlay.style.display = 'flex'; // Show direction overlay
 }
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -407,7 +434,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     map = L.map('map', {
         center: [54.5260, 15.2551],
-        zoom: 16,  // Closer zoom level
+        zoom: 16,
         zoomControl: false,
         scrollWheelZoom: true,
         doubleClickZoom: true,
@@ -431,15 +458,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 userLocation = [latitude, longitude];
                 showMapOrMessage(latitude, longitude, map);
                 if (!startMarker) {
-                    map.setView(userLocation, 16);  // Set view to closer zoom level when location is updated
+                    map.setView(userLocation, 16);
                 }
             },
-            function (error) {
+            function(error) {
                 console.error(`Error obtaining location: ${error.message}`);
             },
             {
                 enableHighAccuracy: true,
-                timeout: 5000,
+                timeout: 5000
                 maximumAge: 0
             }
         );
