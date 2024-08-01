@@ -33,6 +33,13 @@
             <button type="submit" class="button btn request-button"><i class="fas fa-car-side"></i> <span>GO!</span></button>
         </form>
     </section>
+    
+    <!-- New Section for Turn-by-Turn Navigation -->
+    <section id="turn-by-turn-navigation" class="turn-by-turn-navigation">
+        <h2 class="heading">Turn-by-Turn Navigation</h2>
+        <ul id="directions-list" class="directions-list"></ul>
+    </section>
+    
     <div id="map-container">
         <div id="map"></div>
     </div>
@@ -73,143 +80,142 @@
 <script src="https://js.api.here.com/v3/3.1/mapsjs-core.js"></script>
 <script src="https://js.api.here.com/v3/3.1/mapsjs-service.js"></script>
 <script>
-let API_KEY = localStorage.getItem('api_key') || '';
-let startMarker, destMarker, routeControl;
-let map;
-let userLocation = null;
+    let API_KEY = localStorage.getItem('api_key') || '';
+    let startMarker, destMarker, routeControl;
+    let map;
+    let userLocation = null;
 
-if (!API_KEY) {
-    promptForApiKey();
-}
+    if (!API_KEY) {
+        promptForApiKey();
+    }
 
-function promptForApiKey() {
-    let apiKey;
-    do {
-        apiKey = prompt('Please enter your HERE API key:');
-    } while (!apiKey);
-    localStorage.setItem('api_key', apiKey);
-    API_KEY = apiKey;
-}
+    function promptForApiKey() {
+        let apiKey;
+        do {
+            apiKey = prompt('Please enter your HERE API key:');
+        } while (!apiKey);
+        localStorage.setItem('api_key', apiKey);
+        API_KEY = apiKey;
+    }
 
-function toggleSettings() {
-    const settingsOverlay = document.getElementById('settings-overlay');
-    if (settingsOverlay.style.display === 'flex') {
+    function toggleSettings() {
+        const settingsOverlay = document.getElementById('settings-overlay');
+        if (settingsOverlay.style.display === 'flex') {
+            settingsOverlay.style.display = 'none';
+        } else {
+            settingsOverlay.style.display = 'flex';
+            document.getElementById('api-key-input').value = API_KEY || '';
+            updateSettingsThemeIcon();
+        }
+    }
+
+    function closeSettings() {
+        const settingsOverlay = document.getElementById('settings-overlay');
+        const newApiKey = document.getElementById('api-key-input').value;
+        if (newApiKey) {
+            localStorage.setItem('api_key', newApiKey);
+            API_KEY = newApiKey;
+        }
         settingsOverlay.style.display = 'none';
-    } else {
-        settingsOverlay.style.display = 'flex';
-        document.getElementById('api-key-input').value = API_KEY || '';
+    }
+
+    function toggleTheme() {
+        const currentTheme = document.documentElement.getAttribute("data-theme");
+        const newTheme = currentTheme === "dark" ? "light" : "dark";
+        document.documentElement.setAttribute("data-theme", newTheme);
+        localStorage.setItem('theme', newTheme); // Save the theme to localStorage
+        updateThemeIcon();
         updateSettingsThemeIcon();
     }
-}
 
-function closeSettings() {
-    const settingsOverlay = document.getElementById('settings-overlay');
-    const newApiKey = document.getElementById('api-key-input').value;
-    if (newApiKey) {
-        localStorage.setItem('api_key', newApiKey);
-        API_KEY = newApiKey;
-    }
-    settingsOverlay.style.display = 'none';
-}
-
-function toggleTheme() {
-    const currentTheme = document.documentElement.getAttribute("data-theme");
-    const newTheme = currentTheme === "dark" ? "light" : "dark";
-    document.documentElement.setAttribute("data-theme", newTheme);
-    localStorage.setItem('theme', newTheme); // Save the theme to localStorage
-    updateThemeIcon();
-    updateSettingsThemeIcon();
-}
-
-function updateThemeIcon() {
-    const currentTheme = document.documentElement.getAttribute("data-theme");
-    const themeIcon = document.getElementById("theme-toggle").querySelector('i');
-    if (currentTheme === "dark") {
-        themeIcon.classList.remove("fa-sun");
-        themeIcon.classList.add("fa-moon");
-    } else {
-        themeIcon.classList.remove("fa-moon");
-        themeIcon.classList.add("fa-sun");
-    }
-}
-
-function updateSettingsThemeIcon() {
-    const currentTheme = document.documentElement.getAttribute("data-theme");
-    const settingsThemeIcon = document.getElementById("settings-theme-icon");
-    if (currentTheme === "dark") {
-        settingsThemeIcon.classList.remove("fa-sun");
-        settingsThemeIcon.classList.add("fa-moon");
-    } else {
-        settingsThemeIcon.classList.remove("fa-moon");
-        settingsThemeIcon.classList.add("fa-sun");
-    }
-}
-
-function showDestinationSection() {
-    const button = document.querySelector('.get-started-button');
-    const icon = button.querySelector('.fas');
-    const text = button.querySelector('span');
-    const heroText = document.querySelectorAll('.hero h2, .hero p');
-    const heroSection = document.querySelector('.hero');
-    const destinationSection = document.getElementById('destination-section');
-
-    button.classList.add('driving');
-    text.classList.add('disappear');
-    heroText.forEach(element => element.classList.add('hidden'));
-
-    icon.addEventListener('animationend', () => {
-        heroSection.classList.add('hidden');
-        destinationSection.style.display = 'block';
-        destinationSection.classList.add('visible');
-        destinationSection.scrollIntoView({ behavior: 'smooth' });
-    });
-}
-
-function goBtn() {
-    const rqbutton = document.querySelector('.request-button');
-    const rqicon = rqbutton.querySelector('.fas');
-    const rqtext = rqbutton.querySelector('span');
-    const destinationText = document.querySelectorAll('.destination-section h2, .destination-section div');
-    const destinationSection = document.getElementById('destination-section');
-
-    const destination = document.getElementById('destination').value;
-    if (!destination) {
-        alert('Please enter a destination.');
-        return;
+    function updateThemeIcon() {
+        const currentTheme = document.documentElement.getAttribute("data-theme");
+        const themeIcon = document.getElementById("theme-toggle").querySelector('i');
+        if (currentTheme === "dark") {
+            themeIcon.classList.remove("fa-sun");
+            themeIcon.classList.add("fa-moon");
+        } else {
+            themeIcon.classList.remove("fa-moon");
+            themeIcon.classList.add("fa-sun");
+        }
     }
 
-    rqbutton.classList.add('driving');
-    rqtext.classList.add('disappear');
-    destinationText.forEach(element => element.classList.add('hidden'));
-
-    rqicon.addEventListener('animationend', () => {
-        destinationSection.classList.add('hidden');
-    });
-
-    if (userLocation) {
-        addMarkersAndFetchRoute(userLocation);
+    function updateSettingsThemeIcon() {
+        const currentTheme = document.documentElement.getAttribute("data-theme");
+        const settingsThemeIcon = document.getElementById("settings-theme-icon");
+        if (currentTheme === "dark") {
+            settingsThemeIcon.classList.remove("fa-sun");
+            settingsThemeIcon.classList.add("fa-moon");
+        } else {
+            settingsThemeIcon.classList.remove("fa-moon");
+            settingsThemeIcon.classList.add("fa-sun");
+        }
     }
-}
 
-function showMapOrMessage(latitude, longitude, _map) {
-    const mapContainer = document.getElementById('map-container');
-    const message = document.getElementById('unavailable-message');
+    function showDestinationSection() {
+        const button = document.querySelector('.get-started-button');
+        const icon = button.querySelector('.fas');
+        const text = button.querySelector('span');
+        const heroText = document.querySelectorAll('.hero h2, .hero p');
+        const heroSection = document.querySelector('.hero');
+        const destinationSection = document.getElementById('destination-section');
 
-    if (isLocationInEurope(latitude, longitude)) {
-        mapContainer.style.display = 'block';
-        message.style.display = 'none';
-        _map.setView([latitude, longitude], 12); 
-    } else {
-        mapContainer.style.display = 'none';
-        message.style.display = 'block';
+        button.classList.add('driving');
+        text.classList.add('disappear');
+        heroText.forEach(element => element.classList.add('hidden'));
+
+        icon.addEventListener('animationend', () => {
+            heroSection.classList.add('hidden');
+            destinationSection.style.display = 'block';
+            destinationSection.classList.add('visible');
+            destinationSection.scrollIntoView({ behavior: 'smooth' });
+        });
     }
-}
 
-function isLocationInEurope(lat, lon) {
+    function goBtn() {
+        const rqbutton = document.querySelector('.request-button');
+        const rqicon = rqbutton.querySelector('.fas');
+        const rqtext = rqbutton.querySelector('span');
+        const destinationText = document.querySelectorAll('.destination-section h2, .destination-section div');
+        const destinationSection = document.getElementById('destination-section');
+
+        const destination = document.getElementById('destination').value;
+        if (!destination) {
+            alert('Please enter a destination.');
+            return;
+        }
+
+        rqbutton.classList.add('driving');
+        rqtext.classList.add('disappear');
+        destinationText.forEach(element => element.classList.add('hidden'));
+
+        rqicon.addEventListener('animationend', () => {
+            destinationSection.classList.add('hidden');
+        });
+
+        if (userLocation) {
+            addMarkersAndFetchRoute(userLocation);
+        }
+    }
+
+    function showMapOrMessage(latitude, longitude, _map) {
+        const mapContainer = document.getElementById('map-container');
+        const message = document.getElementById('unavailable-message');
+
+        if (isLocationInEurope(latitude, longitude)) {
+            mapContainer.style.display = 'block';
+            message.style.display = 'none';
+            _map.setView([latitude, longitude], 12); 
+        } else {
+            mapContainer.style.display = 'none';
+            message.style.display = 'block';
+        }
+    }
+
+    function isLocationInEurope(lat, lon) {
     return lat >= 34.0 && lat <= 72.0 && lon >= -25.0 && lon <= 45.0;
-}
-
-function getLocationSuggestions(event, type) {
+    }
+    function getLocationSuggestions(event, type) {
     const query = event.target.value;
     const dataList = document.getElementById(`${type === 'start' ? 'start-point-list' : 'destination-list'}`);
 
@@ -335,6 +341,9 @@ async function fetchRouteWithTraffic(startLatLng, destLatLng) {
                     show: false,
                     addWaypoints: false
                 }).addTo(map);
+
+                // Call the function to display turn-by-turn directions
+                displayTurnByTurnDirections(section);
             } else {
                 throw new Error('Route polyline data is missing.');
             }
@@ -345,6 +354,17 @@ async function fetchRouteWithTraffic(startLatLng, destLatLng) {
         console.error('Error fetching route:', error.message);
         alert(`Error fetching route: ${error.message}`);
     }
+}
+
+function displayTurnByTurnDirections(section) {
+    const directionsList = document.getElementById('directions-list');
+    directionsList.innerHTML = '';
+
+    section.actions.forEach((action, index) => {
+        const instruction = document.createElement('li');
+        instruction.textContent = `${index + 1}. ${action.instruction}`;
+        directionsList.appendChild(instruction);
+    });
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -400,3 +420,4 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 </body>
 </html>
+
