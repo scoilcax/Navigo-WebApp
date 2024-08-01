@@ -198,7 +198,7 @@ function showMapOrMessage(latitude, longitude, _map) {
     if (isLocationInEurope(latitude, longitude)) {
         mapContainer.style.display = 'block';
         message.style.display = 'none';
-        _map.setView([latitude, longitude], 12); 
+        _map.setView([latitude, longitude], 17); 
     } else {
         mapContainer.style.display = 'none';
         message.style.display = 'block';
@@ -381,7 +381,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 userLocation = [latitude, longitude];
                 showMapOrMessage(latitude, longitude, map);
                 if (!startMarker) {
-                    map.setView(userLocation, 18);
+                    map.setView(userLocation, 12);
                 }
             },
             function(error) {
